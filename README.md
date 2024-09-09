@@ -1,7 +1,13 @@
-## Usage
+## Preface
 
 1. Download trade data from nordea investor
-1. Execute app `summarizer path/to/excelfile`
+
+## Build & Execute
+
+1. `go build -o bin/summarizer.exe .\cmd\tradesummarize\`
+1. `.\bin\summarizer.exe /path/to/excelfile`
+
+Generates a default config file and starts a server for data `Server started at http://localhost:8080/api/validTrades`
 
 ## Operation
 
@@ -17,5 +23,3 @@
 1. Add language configuration
 1. Improve transactions, remove unnecessary fields
 1. Create different app timeline with Date and amount of sold stock and name of stock
-
-- `Date` `Amount` `Ticker`
