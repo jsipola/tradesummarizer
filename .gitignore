@@ -1,0 +1,44 @@
+# Go binary files
+/bin/
+/obj/
+
+# Dependency directories (remove the comment if you are using Go modules)
+# vendor/
+
+# Go workspace files
+*.test
+*.out
+
+# Coverage files
+*.cov
+*.coverage
+
+# IDE and editor files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Go modules
+go.sum
+go.mod
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Other
+*.exe
+*.xls
+*.xlsx
+*.exe~
+*.dll
+*.so
+*.dylib
