@@ -22,4 +22,6 @@ Generates a default config file and starts a server for data `Server started at 
 1. Different api methods for querying different tickers and timeframes
 1. Add language configuration
 1. Improve transactions, remove unnecessary fields
-1. Create different app timeline with Date and amount of sold stock and name of stock
+1. Add functionality to save result to data
+   - Add methods to update data
+     --Add dividend collection methods

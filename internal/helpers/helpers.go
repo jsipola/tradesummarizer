@@ -7,6 +7,7 @@ import (
 )
 
 type Config struct {
+	Id     int `json:"id"`
 	Name   int `json:"name"`
 	Isin   int `json:"isin"`
 	Type   int `json:"type"`
@@ -37,6 +38,7 @@ func ReadJsonConfig(path string) Config {
 
 func createDefaultConfig() Config {
 	return Config{
+		Id:     0,
 		Name:   2,
 		Isin:   3,
 		Type:   1,
