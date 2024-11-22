@@ -14,17 +14,18 @@ import (
 )
 
 type Trade struct {
-	Ticker string
-	Type   string
-	Amount float64
-	Isin   string
-	Shares int
-	Date   string
+	Id     string  `bson:"Id"`
+	Ticker string  `bson:"Ticker"`
+	Type   string  `bson:"Type"`
+	Amount float64 `bson:"Amount"`
+	Isin   string  `bson:"Isin"`
+	Shares int     `bson:"Shares"`
+	Date   string  `bson:"Date"`
 }
 
 type ApiTrades struct {
-	Ticker       string
-	Transactions []Trade
+	Ticker       string  `bson:"Ticker"`
+	Transactions []Trade `bson:"Transactions"`
 }
 
 type Trades struct {
@@ -53,6 +54,7 @@ func main() {
 	http.HandleFunc("/api/validTrades", tradesHandler2)
 
 	fmt.Println("Server started at http://localhost:8080")
+	mongoInit()
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
@@ -123,8 +125,10 @@ func parseTradeRow(row *xls.Row, cfg helpers.Config) (Trade, error) {
 	var t Trade
 	var err error
 
+	t.Id = strings.TrimSpace(row.Col(cfg.Id))
 	t.Isin = strings.TrimSpace(row.Col(cfg.Isin))
-	t.Type = strings.TrimSpace(row.Col(cfg.Type))
+	var typeTemp = strings.TrimSpace(row.Col(cfg.Type))
+	t.Type = parseType(typeTemp)
 	t.Ticker = strings.TrimSpace(row.Col(cfg.Ticker))
 	t.Date = row.Col(cfg.Date)
 
@@ -139,6 +143,17 @@ func parseTradeRow(row *xls.Row, cfg helpers.Config) (Trade, error) {
 	}
 
 	return t, nil
+}
+
+func parseType(str string) string {
+	switch str {
+	case "Buy":
+		return "Osto"
+	case "Sell":
+		return "Myynti"
+	default:
+		return str
+	}
 }
 
 func organizeTrades(allTrades []Trade) map[string]Trades {
