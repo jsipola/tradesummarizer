@@ -1,4 +1,4 @@
-package main
+package app
 
 import (
 	"context"
@@ -18,7 +18,6 @@ func ConnectMongoDB(uri string) (*mongo.Client, context.Context, error) {
 		return nil, nil, err
 	}
 
-	// Check the connection
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Second)
 	defer cancel()
 
@@ -66,10 +65,10 @@ func FindByTransactionsByTicker(client *mongo.Client, data ApiTrades, ticker str
 	return &trades.Transactions
 }
 
-func SaveData(client *mongo.Client, data ApiTrades) error {
+func SaveData(db *mongo.Database, data ApiTrades) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
 	defer cancel()
-	collection := client.Database("TradeDb-Collect").Collection("Trades")
+	collection := db.Collection("Trades")
 
 	_, err := collection.InsertOne(ctx, data)
 	if err != nil {
@@ -93,8 +92,8 @@ func UpdateTransactionForTicker(client *mongo.Client, ticker string, trade Trade
 	return nil
 }
 
-func mongoInit() {
-	uri := "mongodb://localhost:27017"
+func MongoInit(tradeData []ApiTrades) {
+	uri := "mongodb://localhost:27017/TradeDb-Collect"
 
 	client, ctx, err := ConnectMongoDB(uri)
 	if err != nil {
@@ -102,7 +101,7 @@ func mongoInit() {
 	}
 	defer client.Disconnect(ctx)
 
-	for _, value := range tradesData2 {
+	for _, value := range tradeData {
 
 		/* 		if value.Ticker == "YOU" {
 			fmt.Println("YOU")
@@ -112,7 +111,8 @@ func mongoInit() {
 		var existingTransactions = FindByTransactionsByTicker(client, value, value.Ticker)
 		if existingTransactions == nil {
 			// Save new Ticker
-			err = SaveData(client, value)
+			db := client.Database("TradeDb-Collect")
+			err = SaveData(db, value)
 			if err != nil {
 				log.Fatal(err)
 			}

@@ -10,10 +10,12 @@ import (
 	"strings"
 
 	"github.com/extrame/xls"
+
+	"github.com/jsipola/TradeSummarizer/internal/app"
 	"github.com/jsipola/TradeSummarizer/internal/helpers"
 )
 
-type Trade struct {
+/* type Trade struct {
 	Id     string  `bson:"Id"`
 	Ticker string  `bson:"Ticker"`
 	Type   string  `bson:"Type"`
@@ -35,10 +37,10 @@ type Trades struct {
 	Transactions           []Trade
 	Buy                    []Trade
 	Sell                   []Trade
-}
+} */
 
-var tradesData map[string][]Trade
-var tradesData2 []ApiTrades
+var tradesData map[string][]app.Trade
+var tradesData2 []app.ApiTrades
 
 func main() {
 	args := os.Args[1:]
@@ -54,7 +56,7 @@ func main() {
 	http.HandleFunc("/api/validTrades", tradesHandler2)
 
 	fmt.Println("Server started at http://localhost:8080")
-	mongoInit()
+	app.MongoInit(tradesData2)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
@@ -76,7 +78,7 @@ func tradesHandler2(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(tradesData2)
 }
 
-func Summarize(path string) map[string][]Trade {
+func Summarize(path string) map[string][]app.Trade {
 	f1, err := xls.Open(path, "utf-8")
 	if err != nil {
 		log.Fatalf("Cannot open file: %v", err)
@@ -93,8 +95,8 @@ func Summarize(path string) map[string][]Trade {
 	return executedTrades
 }
 
-func parseTrades(f1 *xls.WorkBook) ([]Trade, error) {
-	allTrades := make([]Trade, 0)
+func parseTrades(f1 *xls.WorkBook) ([]app.Trade, error) {
+	allTrades := make([]app.Trade, 0)
 	sheet := f1.GetSheet(0)
 
 	if sheet == nil {
@@ -121,8 +123,8 @@ func parseTrades(f1 *xls.WorkBook) ([]Trade, error) {
 	return allTrades, nil
 }
 
-func parseTradeRow(row *xls.Row, cfg helpers.Config) (Trade, error) {
-	var t Trade
+func parseTradeRow(row *xls.Row, cfg helpers.Config) (app.Trade, error) {
+	var t app.Trade
 	var err error
 
 	t.Id = strings.TrimSpace(row.Col(cfg.Id))
@@ -156,13 +158,13 @@ func parseType(str string) string {
 	}
 }
 
-func organizeTrades(allTrades []Trade) map[string]Trades {
-	trades := make(map[string]Trades)
+func organizeTrades(allTrades []app.Trade) map[string]app.Trades {
+	trades := make(map[string]app.Trades)
 
 	for _, t := range allTrades {
 		value, exists := trades[t.Ticker]
 		if !exists {
-			value = Trades{Ticker: t.Ticker}
+			value = app.Trades{Ticker: t.Ticker}
 		}
 
 		switch t.Type {
@@ -181,12 +183,12 @@ func organizeTrades(allTrades []Trade) map[string]Trades {
 	return trades
 }
 
-func printSummary(trades map[string]Trades) map[string][]Trade {
+func printSummary(trades map[string]app.Trades) map[string][]app.Trade {
 	total := 0.0
 	totalWins := 0
 	totalLosses := 0
-	executedTrades := make(map[string]Trades)
-	apiTrades := map[string][]Trade{}
+	executedTrades := make(map[string]app.Trades)
+	apiTrades := map[string][]app.Trade{}
 	for _, vTrades := range trades {
 		if len(vTrades.Buy) == 0 || len(vTrades.Sell) == 0 {
 			continue
@@ -201,7 +203,7 @@ func printSummary(trades map[string]Trades) map[string][]Trade {
 		totalSells := 0.0
 		totalBuys, totalSells, validTrades := calculatePnL(vTrades)
 		apiTrades[vTrades.Ticker] = validTrades
-		tradesData2 = append(tradesData2, ApiTrades{Ticker: vTrades.Ticker, Transactions: validTrades})
+		tradesData2 = append(tradesData2, app.ApiTrades{Ticker: vTrades.Ticker, Transactions: validTrades})
 		total += totalSells - totalBuys
 
 		amount := strconv.FormatFloat(totalSells-totalBuys, 'f', 2, 64)
@@ -219,7 +221,7 @@ func printSummary(trades map[string]Trades) map[string][]Trade {
 	return apiTrades
 }
 
-func calculatePnL(vTrades Trades) (totalBuys float64, totalSells float64, validTrades []Trade) {
+func calculatePnL(vTrades app.Trades) (totalBuys float64, totalSells float64, validTrades []app.Trade) {
 	shouldCountSells := false
 	buyAmount := 0
 	for i := len(vTrades.Transactions) - 1; i >= 0; i-- {
@@ -262,7 +264,7 @@ func calculatePnL(vTrades Trades) (totalBuys float64, totalSells float64, validT
 	return totalBuys, totalSells, validTrades
 }
 
-func hasAnySellsLeft(transactions []Trade) bool {
+func hasAnySellsLeft(transactions []app.Trade) bool {
 	for i := len(transactions) - 1; i >= 0; i-- {
 		if transactions[i].Type == "Myynti" {
 			return true
