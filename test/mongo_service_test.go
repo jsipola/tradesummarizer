@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"os"
+	"slices"
 	"testing"
 	"time"
 
@@ -56,5 +57,30 @@ func TestSaveData(t *testing.T) {
 	if expectedTrade != apiTrades.Transactions[0] {
 		t.Fatal("Error Unexpected Trade found: ", apiTrades.Transactions[0], "Expected: ", expectedTrade)
 	}
+}
 
+func TestFindByTransactionsByTicker(t *testing.T) {
+	//TODO refactor setup method
+	transactions := make([]tradesummarize.Trade, 0)
+	expectedTrade := tradesummarize.Trade{Id: "01234567", Ticker: "TestTicker", Type: "Osto", Amount: 123.123, Isin: "ISINHERE", Shares: 12, Date: "11.11.2011"}
+	transactions = append(transactions, expectedTrade)
+	data := tradesummarize.ApiTrades{Ticker: "TestTicker", Transactions: transactions}
+
+	db := client.Database("TradeDb-Collect_test")
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
+	defer cancel()
+
+	_, err := db.Collection("Trades").InsertOne(ctx, data)
+	if err != nil {
+		t.Fatal("Error inserting data to db: ", err.Error())
+	}
+
+	trades := tradesummarize.FindByTransactionsByTicker(db, data, data.Ticker)
+	if trades == nil {
+		t.Fatal("Error finding ticker", err.Error())
+	}
+	if !slices.Contains(*trades, expectedTrade) {
+		t.Fatal("Error Unexpected transaction found in : ", *trades, "Expected:", expectedTrade)
+
+	}
 }

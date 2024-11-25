@@ -18,10 +18,10 @@ Generates a default config file and starts a server for data `Server started at 
 ## TODO
 
 1. Improve api serving
-1. Add tests
+1. Add more tests
 1. Different api methods for querying different tickers and timeframes
 1. Add language configuration
 1. Improve transactions, remove unnecessary fields
 1. Add functionality to save result to data
    - Add methods to update data
-     --Add dividend collection methods
+   - Add dividend collection methods

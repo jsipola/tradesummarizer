@@ -47,11 +47,11 @@ func ConnectMongoDB(uri string) (*mongo.Client, context.Context, error) {
 	return &trades
 } */
 
-func FindByTransactionsByTicker(client *mongo.Client, data ApiTrades, ticker string) *[]Trade {
+func FindByTransactionsByTicker(db *mongo.Database, data ApiTrades, ticker string) *[]Trade {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
 	defer cancel()
 
-	collection := client.Database("TradeDb-Collect").Collection("Trades")
+	collection := db.Collection("Trades")
 
 	var trades ApiTrades
 	err := collection.FindOne(ctx, bson.M{"Ticker": ticker}).Decode(&trades)
@@ -107,11 +107,11 @@ func MongoInit(tradeData []ApiTrades) {
 			fmt.Println("YOU")
 			value.Transactions = append(value.Transactions, Trade{"12345678", "YOU", "Osto", 123.123, "ISINHERE", 12, "11.11.2011"})
 		} */
+		db := client.Database("TradeDb-Collect")
 
-		var existingTransactions = FindByTransactionsByTicker(client, value, value.Ticker)
+		var existingTransactions = FindByTransactionsByTicker(db, value, value.Ticker)
 		if existingTransactions == nil {
 			// Save new Ticker
-			db := client.Database("TradeDb-Collect")
 			err = SaveData(db, value)
 			if err != nil {
 				log.Fatal(err)
