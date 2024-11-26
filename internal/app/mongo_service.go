@@ -79,16 +79,16 @@ func SaveData(db *mongo.Database, data ApiTrades) error {
 	return nil
 }
 
-func UpdateTransactionForTicker(client *mongo.Client, ticker string, trade Trade) error {
+func InsertNewTransactionForTicker(database *mongo.Database, ticker string, trade Trade) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
 	defer cancel()
-	collection := client.Database("TradeDb-Collect").Collection("Trades")
+	collection := database.Collection("Trades")
 
 	_, err := collection.UpdateOne(ctx, bson.M{"Ticker": ticker}, bson.M{"$push": bson.M{"Transactions": trade}})
 	if err != nil {
 		return err
 	}
-	fmt.Println("Updated existing Ticker:", ticker, " with new transaction id:", trade.Id)
+	fmt.Println("Updated existing Ticker:", ticker, " with transaction id:", trade.Id)
 	return nil
 }
 
@@ -122,7 +122,7 @@ func MongoInit(tradeData []ApiTrades) {
 				if slices.Contains(*existingTransactions, transaction) {
 					fmt.Println("Found existing transactions id for Ticker:", value.Ticker)
 				} else {
-					UpdateTransactionForTicker(client, transaction.Ticker, transaction)
+					InsertNewTransactionForTicker(db, transaction.Ticker, transaction)
 				}
 			}
 		}

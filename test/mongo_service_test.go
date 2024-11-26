@@ -84,3 +84,43 @@ func TestFindByTransactionsByTicker(t *testing.T) {
 
 	}
 }
+
+func TestUpdateTransactionForTicker(t *testing.T) {
+	//TODO refactor setup method
+	transactions := make([]tradesummarize.Trade, 0)
+	expectedTrade := tradesummarize.Trade{Id: "01234567", Ticker: "TestTicker", Type: "Osto", Amount: 123.123, Isin: "ISINHERE", Shares: 12, Date: "11.11.2011"}
+	transactions = append(transactions, expectedTrade)
+	data := tradesummarize.ApiTrades{Ticker: "TestTicker", Transactions: transactions}
+
+	db := client.Database("TradeDb-Collect_test")
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
+	defer cancel()
+
+	_, err := db.Collection("Trades").InsertOne(ctx, data)
+	if err != nil {
+		t.Fatal("Error inserting data to db: ", err.Error())
+	}
+	newTrade := tradesummarize.Trade{Id: "01234567", Ticker: "TestTicker", Type: "Osto", Amount: 456.456, Isin: "ISINHERE", Shares: 12, Date: "11.11.2011"}
+
+	err = tradesummarize.InsertNewTransactionForTicker(db, newTrade.Ticker, newTrade)
+	if err != nil {
+		t.Fatal("Error updatuing data to db: ", err.Error())
+	}
+
+	var apiTrades tradesummarize.ApiTrades
+	err = db.Collection("Trades").FindOne(ctx, bson.M{"Ticker": newTrade.Ticker}).Decode(&apiTrades)
+	if err != nil {
+		t.Fatal("Error Finding ticker", err.Error())
+	}
+
+	if len(apiTrades.Transactions) != 2 {
+		t.Fatal("Error Wrong number of Transactions found: ", len(apiTrades.Transactions))
+	}
+
+	if !slices.Contains(apiTrades.Transactions, expectedTrade) {
+		t.Fatal("No Old trade found")
+	}
+	if !slices.Contains(apiTrades.Transactions, newTrade) {
+		t.Fatal("No new trade Inserted")
+	}
+}
