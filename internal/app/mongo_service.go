@@ -47,11 +47,9 @@ func ConnectMongoDB(uri string) (*mongo.Client, context.Context, error) {
 	return &trades
 } */
 
-func FindByTransactionsByTicker(db *mongo.Database, data ApiTrades, ticker string) *[]Trade {
+func FindByTransactionsByTicker(collection *mongo.Collection, data ApiTrades, ticker string) *[]Trade {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
 	defer cancel()
-
-	collection := db.Collection("Trades")
 
 	var trades ApiTrades
 	err := collection.FindOne(ctx, bson.M{"Ticker": ticker}).Decode(&trades)
@@ -65,10 +63,9 @@ func FindByTransactionsByTicker(db *mongo.Database, data ApiTrades, ticker strin
 	return &trades.Transactions
 }
 
-func SaveData(db *mongo.Database, data ApiTrades) error {
+func SaveData(collection *mongo.Collection, data ApiTrades) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
 	defer cancel()
-	collection := db.Collection("Trades")
 
 	_, err := collection.InsertOne(ctx, data)
 	if err != nil {
@@ -79,10 +76,9 @@ func SaveData(db *mongo.Database, data ApiTrades) error {
 	return nil
 }
 
-func InsertNewTransactionForTicker(database *mongo.Database, ticker string, trade Trade) error {
+func InsertNewTransactionForTicker(collection *mongo.Collection, ticker string, trade Trade) error {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
 	defer cancel()
-	collection := database.Collection("Trades")
 
 	_, err := collection.UpdateOne(ctx, bson.M{"Ticker": ticker}, bson.M{"$push": bson.M{"Transactions": trade}})
 	if err != nil {
@@ -108,11 +104,11 @@ func MongoInit(tradeData []ApiTrades) {
 			value.Transactions = append(value.Transactions, Trade{"12345678", "YOU", "Osto", 123.123, "ISINHERE", 12, "11.11.2011"})
 		} */
 		db := client.Database("TradeDb-Collect")
-
-		var existingTransactions = FindByTransactionsByTicker(db, value, value.Ticker)
+		collection := db.Collection("Trades")
+		var existingTransactions = FindByTransactionsByTicker(collection, value, value.Ticker)
 		if existingTransactions == nil {
 			// Save new Ticker
-			err = SaveData(db, value)
+			err = SaveData(collection, value)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -122,7 +118,7 @@ func MongoInit(tradeData []ApiTrades) {
 				if slices.Contains(*existingTransactions, transaction) {
 					fmt.Println("Found existing transactions id for Ticker:", value.Ticker)
 				} else {
-					InsertNewTransactionForTicker(db, transaction.Ticker, transaction)
+					InsertNewTransactionForTicker(collection, transaction.Ticker, transaction)
 				}
 			}
 		}
