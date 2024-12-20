@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -15,9 +14,6 @@ import (
 	"github.com/jsipola/TradeSummarizer/internal/helpers"
 )
 
-var tradesData map[string][]app.Trade
-var tradesData2 []app.ApiTrades
-
 func main() {
 	args := os.Args[1:]
 
@@ -26,35 +22,19 @@ func main() {
 		Summarize("data/ND_JAN_FEB.xls")
 		return
 	}
-	tradesData = Summarize(args[0])
+	tradesData, tradesData2 := Summarize(args[0])
+	app.SetTradesData(tradesData)
+	app.SetTradesData2(tradesData2)
 
-	http.HandleFunc("/api/trades", tradesHandler)
-	http.HandleFunc("/api/validTrades", tradesHandler2)
+	http.HandleFunc("/api/trades", app.TradesHandler)
+	http.HandleFunc("/api/validTrades", app.ValidTradesHandler)
 
 	fmt.Println("Server started at http://localhost:8080")
 	app.MongoInit(tradesData2)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
-func tradesHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-	json.NewEncoder(w).Encode(tradesData)
-}
-
-func tradesHandler2(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
-	w.Header().Set("Access-Control-Allow-Origin", "*")
-	w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-	w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
-
-	json.NewEncoder(w).Encode(tradesData2)
-}
-
-func Summarize(path string) map[string][]app.Trade {
+func Summarize(path string) (map[string][]app.Trade, []app.ApiTrades) {
 	f1, err := xls.Open(path, "utf-8")
 	if err != nil {
 		log.Fatalf("Cannot open file: %v", err)
@@ -67,8 +47,8 @@ func Summarize(path string) map[string][]app.Trade {
 
 	trades := organizeTrades(allTrades)
 
-	executedTrades := printSummary(trades)
-	return executedTrades
+	executedTrades, validTrades := printSummary(trades)
+	return executedTrades, validTrades
 }
 
 func parseTrades(f1 *xls.WorkBook) ([]app.Trade, error) {
@@ -159,12 +139,13 @@ func organizeTrades(allTrades []app.Trade) map[string]app.Trades {
 	return trades
 }
 
-func printSummary(trades map[string]app.Trades) map[string][]app.Trade {
+func printSummary(trades map[string]app.Trades) (map[string][]app.Trade, []app.ApiTrades) {
 	total := 0.0
 	totalWins := 0
 	totalLosses := 0
 	executedTrades := make(map[string]app.Trades)
 	apiTrades := map[string][]app.Trade{}
+	newTrades := make([]app.ApiTrades, 0)
 	for _, vTrades := range trades {
 		if len(vTrades.Buy) == 0 || len(vTrades.Sell) == 0 {
 			continue
@@ -179,7 +160,7 @@ func printSummary(trades map[string]app.Trades) map[string][]app.Trade {
 		totalSells := 0.0
 		totalBuys, totalSells, validTrades := calculatePnL(vTrades)
 		apiTrades[vTrades.Ticker] = validTrades
-		tradesData2 = append(tradesData2, app.ApiTrades{Ticker: vTrades.Ticker, Transactions: validTrades})
+		newTrades = append(newTrades, app.ApiTrades{Ticker: vTrades.Ticker, Transactions: validTrades})
 		total += totalSells - totalBuys
 
 		amount := strconv.FormatFloat(totalSells-totalBuys, 'f', 2, 64)
@@ -194,7 +175,7 @@ func printSummary(trades map[string]app.Trades) map[string][]app.Trade {
 
 	fmt.Printf("Total: %.2f\n", total)
 	fmt.Printf("Wins: %d Losses: %d\n", totalWins, totalLosses)
-	return apiTrades
+	return apiTrades, newTrades
 }
 
 func calculatePnL(vTrades app.Trades) (totalBuys float64, totalSells float64, validTrades []app.Trade) {
