@@ -102,7 +102,7 @@ func parseTradeRow(row *xls.Row) (Trade, error) {
 
 	t.Shares, err = strconv.Atoi(row.Col(8))
 	if err != nil {
-		return t, fmt.Errorf("invalid share count: %v", err)
+		return t, fmt.Errorf("invalid share count: %v "+t.Ticker, err)
 	}
 
 	t.Amount, err = strconv.ParseFloat(row.Col(22), 64)

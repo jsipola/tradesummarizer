@@ -30,23 +30,6 @@ func ConnectMongoDB(uri string) (*mongo.Client, context.Context, error) {
 	return client, ctx, nil
 }
 
-/* func FindByTicker(client *mongo.Client, data ApiTrades) {
-	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
-	defer cancel()
-
-	collection := client.Database("TradeDb-Collect").Collection("Trades")
-
-	var trades ApiTrades
-	err := collection.FindOne(ctx, bson.M{"Ticker": data.Ticker}).Decode(trades)
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil
-		}
-		return nil
-	}
-	return &trades
-} */
-
 func FindByTransactionsByTicker(collection *mongo.Collection, data ApiTrades, ticker string) *[]Trade {
 	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Second)
 	defer cancel()
@@ -115,10 +98,10 @@ func MongoInit(tradeData []ApiTrades) {
 		} else {
 			for _, transaction := range value.Transactions {
 				// Use ContainsFunc instead?
-				if slices.Contains(*existingTransactions, transaction) {
-					fmt.Println("Found existing transactions id for Ticker:", value.Ticker)
-				} else {
+				if !slices.Contains(*existingTransactions, transaction) {
 					InsertNewTransactionForTicker(collection, transaction.Ticker, transaction)
+				} else {
+					//fmt.Println("Found existing transactions id for Ticker:", value.Ticker)
 				}
 			}
 		}
